@@ -1,41 +1,51 @@
-# File: buff.py
-# Tool Buff TikTok View Chạy Trực Tiếp Trên Điện Thoại Android / Ugphone (Qua Termux)
-# Kết nối mạng 4G trực tiếp từ SIM để đạt tốc độ cao và vượt bộ lọc IP
+#!/usr/bin/env python3
+# BuffK$ - TikTok View & Share Tool (Pure Python Version for Android / Termux / PC)
+# Chuyển đổi 1:1 từ BuffK$.exe (kenh4x self leak) - 100% Thư viện chuẩn, KHÔNG CẦN CÀI PIP!
 
-import asyncio
-import json
+import concurrent.futures
 import os
 import random
 import re
 import sys
 import time
-from typing import Optional, Dict, Any
-import httpx
-from colorama import Fore, Style, init
-
-init(autoreset=True)
+import urllib.parse
+import urllib.request
 
 DEVICES = [
-    {"brand": "samsung", "model": "SM-G998B", "os": "13"},
-    {"brand": "samsung", "model": "SM-F926B", "os": "12"},
-    {"brand": "google", "model": "Pixel 7", "os": "13"},
-    {"brand": "google", "model": "Pixel 8", "os": "14"},
-    {"brand": "xiaomi", "model": "POCO F5", "os": "13"},
-    {"brand": "xiaomi", "model": "POCO F6", "os": "14"},
+    {"brand": "Google", "model": "Pixel 8 Pro", "os": "14"},
+    {"brand": "Google", "model": "Pixel 7", "os": "13"},
+    {"brand": "Samsung", "model": "SM-G998B", "os": "13"},
+    {"brand": "Samsung", "model": "SM-S918B", "os": "14"},
+    {"brand": "OnePlus", "model": "OnePlus 12", "os": "14"},
+    {"brand": "OnePlus", "model": "OnePlus 11", "os": "13"},
+    {"brand": "Xiaomi", "model": "POCO F6", "os": "14"},
+    {"brand": "Xiaomi", "model": "POCO F5", "os": "13"},
+    {"brand": "OPPO", "model": "OPPO Reno 8", "os": "13"},
+    {"brand": "Nothing", "model": "Nothing Phone (2)", "os": "14"},
 ]
 
-def resolve_video_id(url_or_id: str) -> str:
+def clear_screen():
+    os.system("cls" if os.name == "nt" else "clear")
+
+def banner():
+    print("""
+    kenh4x self leak
+""")
+
+def resolve_id(url_or_id: str) -> str:
     url_or_id = url_or_id.strip()
     if url_or_id.isdigit():
         return url_or_id
     
+    # Phân giải link rút gọn nếu là link vt.tiktok.com
     if "tiktok.com" in url_or_id and not re.search(r"/video/(\d+)", url_or_id):
-        print(Fore.BLUE + "[*] Đang phân giải link rút gọn...")
         try:
-            with httpx.Client(follow_redirects=True, timeout=10.0) as client:
-                headers = {"User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"}
-                resp = client.get(url_or_id, headers=headers)
-                url_or_id = str(resp.url)
+            req = urllib.request.Request(
+                url_or_id,
+                headers={"User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                url_or_id = resp.geturl()
         except Exception:
             pass
 
@@ -49,45 +59,19 @@ def resolve_video_id(url_or_id: str) -> str:
         
     return url_or_id
 
-def fetch_stats(item_id: str) -> Optional[Dict[str, Any]]:
-    try:
-        url = f"https://www.tiktok.com/@a/video/{item_id}"
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Linux; Android 13; SM-G998B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        }
-        with httpx.Client(timeout=10.0, follow_redirects=True) as client:
-            resp = client.get(url, headers=headers)
-            if resp.status_code == 200:
-                match = re.search(r'<script id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>({.*?})<\/script>', resp.text)
-                if match:
-                    data = json.loads(match.group(1))
-                    return data['__DEFAULT_SCOPE__']['webapp.video-detail']['itemInfo']['itemStruct']['stats']
-    except Exception:
-        pass
-    return None
-
-def print_banner():
-    print(Fore.CYAN + "=" * 48)
-    print(Fore.GREEN + Style.BRIGHT + "   TIKTOK VIEW MOBILE (TERMUX / UGPHONE 4G)")
-    print(Fore.CYAN + "=" * 48)
-    print(Fore.YELLOW + " • Nền tảng : Android / Ugphone / Termux")
-    print(Fore.YELLOW + " • Kết nối  : 4G SIM trực tiếp (Tốc độ tối đa)")
-    print(Fore.YELLOW + " • Đổi IP   : Bật/Tắt Chế độ máy bay (Airplane)")
-    print(Fore.CYAN + "-" * 48)
-
-async def send_view_request(client: httpx.AsyncClient, item_id: str, view_idx: int) -> bool:
+def send_request(item_id: str, is_share: bool = False) -> bool:
     dev = random.choice(DEVICES)
     device_id = str(random.randint(7000000000000000000, 7999999999999999999))
-    install_id = str(random.randint(7000000000000000000, 7999999999999999999))
+    iid = str(random.randint(7000000000000000000, 7999999999999999999))
     
-    url = "https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/aweme/stats/"
+    delta_param = "share_delta" if is_share else "play_delta"
+    
     params = {
         "item_id": item_id,
-        "play_delta": "1",
+        delta_param: "1",
         "action_time": str(int(time.time())),
         "device_id": device_id,
-        "iid": install_id,
+        "iid": iid,
         "device_type": dev["model"],
         "device_brand": dev["brand"],
         "os_version": dev["os"],
@@ -97,76 +81,90 @@ async def send_view_request(client: httpx.AsyncClient, item_id: str, view_idx: i
         "aid": "1233",
     }
     
-    headers = {
-        "User-Agent": f"com.zhiliaoapp.musically/340502 (Linux; U; Android {dev['os']}; vi_VN; {dev['model']})",
-        "Accept-Encoding": "gzip, deflate",
-        "X-SS-REQ-TICKET": str(int(time.time() * 1000)),
-    }
+    url = f"https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/aweme/stats/?{urllib.parse.urlencode(params)}"
+    
+    req = urllib.request.Request(
+        url,
+        data=b"",
+        headers={
+            "User-Agent": f"com.zhiliaoapp.musically/340502 (Linux; U; Android {dev['os']}; vi_VN; {dev['model']})",
+            "Accept-Encoding": "gzip, deflate",
+            "Connection": "keep-alive",
+            "X-SS-REQ-TICKET": str(int(time.time() * 1000)),
+        }
+    )
     
     try:
-        resp = await client.post(url, params=params, headers=headers, timeout=6.0)
-        return resp.status_code == 200
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            return resp.status == 200
     except Exception:
         return False
 
-async def main():
-    print_banner()
+def run_worker(item_id: str, target: int, is_share: bool = False):
+    label = "shares" if is_share else "views"
+    print(f"\n  [*] sending {target} {label}")
     
-    video_input = input(Fore.GREEN + "[?] Nhập Link video hoặc Video ID: ").strip()
-    if not video_input:
-        print(Fore.RED + "[!] Lỗi: Chưa nhập link!")
-        return
-        
-    item_id = resolve_video_id(video_input)
-    print(Fore.MAGENTA + Style.BRIGHT + f"  [✓] ID Video: {item_id}\n")
+    completed = 0
+    start_time = time.time()
     
-    amount_str = input(Fore.GREEN + "[?] Số lượt xem muốn buff (Mặc định 100): ").strip()
-    try:
-        target = int(amount_str) if amount_str else 100
-    except ValueError:
-        target = 100
-        
-    batch_str = input(Fore.GREEN + "[?] Số view mỗi đợt đổi 4G (Khuyên dùng 50): ").strip()
-    try:
-        batch_size = int(batch_str) if batch_str else 50
-    except ValueError:
-        batch_size = 50
-
-    print(Fore.CYAN + "\n[*] Kiểm tra số liệu ban đầu...")
-    stats = fetch_stats(item_id)
-    if stats:
-        print(Fore.CYAN + f"  ▶ Lượt xem hiện tại: {stats.get('playCount', 0):,}")
-    
-    print(Fore.GREEN + Style.BRIGHT + f"\n🚀 Bắt đầu gửi {target} views qua 4G...")
-    
-    total_sent = 0
-    t0 = time.time()
-    
-    async with httpx.AsyncClient(verify=False) as client:
-        while total_sent < target:
-            current_batch = min(batch_size, target - total_sent)
-            tasks = []
-            for _ in range(current_batch):
-                total_sent += 1
-                tasks.append(send_view_request(client, item_id, total_sent))
+    # Chạy 15 luồng song song như BuffK$.exe
+    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
+        while completed < target:
+            batch = min(15, target - completed)
+            futures = [executor.submit(send_request, item_id, is_share) for _ in range(batch)]
+            for f in concurrent.futures.as_completed(futures):
+                if f.result():
+                    completed += 1
                 
-            results = await asyncio.gather(*tasks)
-            success_count = sum(1 for r in results if r)
-            print(Fore.GREEN + f"  [✓] Đã gửi đợt {total_sent}/{target} views ({success_count}/{current_batch} thành công)")
-            
-            if total_sent < target:
-                print(Fore.YELLOW + "\n👉 MẸO: Vuốt thanh thông báo BẬT rồi TẮT Chế độ máy bay (Airplane) để đổi IP 4G mới.")
-                choice = input(Fore.GREEN + "[?] Nhấn Enter để chạy đợt tiếp theo (hoặc gõ 'q' để dừng): ").strip()
-                if choice.lower() == 'q':
+                elapsed = time.time() - start_time
+                rate = int(completed / elapsed) if elapsed > 0 else 0
+                pct = int((completed / target) * 100) if target > 0 else 0
+                
+                sys.stdout.write(f"\r  {label}: {completed}/{target} ({pct}%)  rate: {rate}/s   ")
+                sys.stdout.flush()
+                
+                if completed >= target:
                     break
 
-    dur = time.time() - t0
-    print(Fore.CYAN + "\n" + "=" * 48)
-    print(Fore.GREEN + Style.BRIGHT + f"🎉 Hoàn tất! Đã gửi: {total_sent} views trong {dur:.1f}s")
-    print(Fore.CYAN + "=" * 48)
+    print(f"\n\n  [✓] Hoàn thành {completed}/{target} {label}!\n")
+
+def main():
+    while True:
+        clear_screen()
+        banner()
+        print("  [1] TikTok Viewer")
+        print("  [2] TikTok Sharer")
+        print("  [3] Exit\n")
+        
+        choice = input("  [?] select: ").strip()
+        if choice == "3" or choice.lower() == "exit":
+            print("\n  Goodbye!")
+            break
+            
+        if choice not in ["1", "2"]:
+            continue
+            
+        is_share = (choice == "2")
+        
+        clear_screen()
+        banner()
+        url_input = input("  [?] url/id: ").strip()
+        if not url_input:
+            continue
+            
+        item_id = resolve_id(url_input)
+        
+        views_str = input("  [?] views: ").strip()
+        try:
+            target = int(views_str) if views_str else 100
+        except ValueError:
+            target = 100
+            
+        run_worker(item_id, target, is_share=is_share)
+        input("  Nhấn Enter để quay lại menu...")
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        main()
     except KeyboardInterrupt:
-        print(Fore.RED + "\n[!] Đã dừng chương trình.")
+        print("\n\n  [!] Exiting...")
