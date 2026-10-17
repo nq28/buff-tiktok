@@ -142,7 +142,7 @@ async def main():
     total_sent = 0
     t0 = time.time()
     
-    async with httpx.AsyncClient(http2=True, verify=False) as client:
+    async with httpx.AsyncClient(verify=False) as client:
         while total_sent < target:
             current_batch = min(batch_size, target - total_sent)
             tasks = []
