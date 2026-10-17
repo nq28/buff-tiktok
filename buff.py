@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-# BuffK$ - TikTok View & Share Tool (Pure Python Version for Android / Termux / PC)
-# Chuyển đổi 1:1 từ BuffK$.exe (kenh4x self leak) - 100% Thư viện chuẩn, KHÔNG CẦN CÀI PIP!
+# BuffK$ - TikTok View & Share Tool (1:1 Exact Match with BuffK$.exe)
+# Hoạt động 100% bằng thư viện chuẩn của Python, chạy được trên mọi máy Android/Termux/PC
 
-import concurrent.futures
 import os
 import random
 import re
@@ -37,7 +36,6 @@ def resolve_id(url_or_id: str) -> str:
     if url_or_id.isdigit():
         return url_or_id
     
-    # Phân giải link rút gọn nếu là link vt.tiktok.com
     if "tiktok.com" in url_or_id and not re.search(r"/video/(\d+)", url_or_id):
         try:
             req = urllib.request.Request(
@@ -69,6 +67,7 @@ def send_request(item_id: str, is_share: bool = False) -> bool:
     params = {
         "item_id": item_id,
         delta_param: "1",
+        "aweme_type": "0",
         "action_time": str(int(time.time())),
         "device_id": device_id,
         "iid": iid,
@@ -81,7 +80,8 @@ def send_request(item_id: str, is_share: bool = False) -> bool:
         "aid": "1233",
     }
     
-    url = f"https://api16-normal-c-useast1a.tiktokv.com/aweme/v1/aweme/stats/?{urllib.parse.urlencode(params)}"
+    # Máy chủ chính xác của BuffK$.exe
+    url = f"https://api19.tiktokv.com/aweme/v1/aweme/stats/?{urllib.parse.urlencode(params)}"
     
     req = urllib.request.Request(
         url,
@@ -107,24 +107,20 @@ def run_worker(item_id: str, target: int, is_share: bool = False):
     completed = 0
     start_time = time.time()
     
-    # Chạy 15 luồng song song như BuffK$.exe
-    with concurrent.futures.ThreadPoolExecutor(max_workers=15) as executor:
-        while completed < target:
-            batch = min(15, target - completed)
-            futures = [executor.submit(send_request, item_id, is_share) for _ in range(batch)]
-            for f in concurrent.futures.as_completed(futures):
-                if f.result():
-                    completed += 1
-                
-                elapsed = time.time() - start_time
-                rate = int(completed / elapsed) if elapsed > 0 else 0
-                pct = int((completed / target) * 100) if target > 0 else 0
-                
-                sys.stdout.write(f"\r  {label}: {completed}/{target} ({pct}%)  rate: {rate}/s   ")
-                sys.stdout.flush()
-                
-                if completed >= target:
-                    break
+    while completed < target:
+        ok = send_request(item_id, is_share)
+        if ok:
+            completed += 1
+            
+        elapsed = time.time() - start_time
+        rate = int(completed / elapsed) if elapsed > 0 else 0
+        pct = int((completed / target) * 100) if target > 0 else 0
+        
+        sys.stdout.write(f"\r  {label}: {completed}/{target} ({pct}%)  rate: {rate}/s    ")
+        sys.stdout.flush()
+        
+        # Nhịp độ tự nhiên giống BuffK$.exe để TikTok không chặn rate-limit
+        time.sleep(random.uniform(0.7, 1.2))
 
     print(f"\n\n  [✓] Hoàn thành {completed}/{target} {label}!\n")
 
