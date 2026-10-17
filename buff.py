@@ -2,10 +2,12 @@
 # BuffK$ - TikTok View & Share Tool (1:1 Exact Match with BuffK$.exe)
 # Hoạt động 100% bằng thư viện chuẩn của Python, chạy được trên mọi máy Android/Termux/PC
 
+import concurrent.futures
 import os
 import random
 import re
 import sys
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -80,7 +82,6 @@ def send_request(item_id: str, is_share: bool = False) -> bool:
         "aid": "1233",
     }
     
-    # Máy chủ chính xác của BuffK$.exe
     url = f"https://api19.tiktokv.com/aweme/v1/aweme/stats/?{urllib.parse.urlencode(params)}"
     
     req = urllib.request.Request(
@@ -105,22 +106,46 @@ def run_worker(item_id: str, target: int, is_share: bool = False):
     print(f"\n  [*] sending {target} {label}")
     
     completed = 0
+    lock = threading.Lock()
     start_time = time.time()
     
-    while completed < target:
-        ok = send_request(item_id, is_share)
-        if ok:
-            completed += 1
+    # 5 luồng song song như cơ chế goroutine clientPool của BuffK$.exe (đạt 5 view/s khi mạng sạch)
+    num_threads = 5
+    
+    def worker_thread():
+        nonlocal completed
+        while True:
+            with lock:
+                if completed >= target:
+                    return
             
-        elapsed = time.time() - start_time
-        rate = int(completed / elapsed) if elapsed > 0 else 0
-        pct = int((completed / target) * 100) if target > 0 else 0
+            ok = send_request(item_id, is_share)
+            
+            with lock:
+                if ok:
+                    completed += 1
+                
+                elapsed = time.time() - start_time
+                rate = int(completed / elapsed) if elapsed > 0 else 0
+                pct = int((completed / target) * 100) if target > 0 else 0
+                
+                sys.stdout.write(f"\r  {label}: {completed}/{target} ({pct}%)  rate: {rate}/s    ")
+                sys.stdout.flush()
+                
+                if completed >= target:
+                    return
+                    
+            time.sleep(0.05)
+
+    threads = []
+    for _ in range(num_threads):
+        t = threading.Thread(target=worker_thread)
+        t.daemon = True
+        t.start()
+        threads.append(t)
         
-        sys.stdout.write(f"\r  {label}: {completed}/{target} ({pct}%)  rate: {rate}/s    ")
-        sys.stdout.flush()
-        
-        # Nhịp độ tự nhiên giống BuffK$.exe để TikTok không chặn rate-limit
-        time.sleep(random.uniform(0.7, 1.2))
+    for t in threads:
+        t.join()
 
     print(f"\n\n  [✓] Hoàn thành {completed}/{target} {label}!\n")
 
